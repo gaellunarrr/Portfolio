@@ -23,13 +23,9 @@ apiRouter.use('/plazas', plazasRouter);
 apiRouter.use('/links', linksRouter);
 apiRouter.use('/aspirantes', aspirantesRouter);
 
-apiRouter.use("/links", linksRouter)
-
-apiRouter.use('/exams', examsRouter);
-
-// Prefill primero
+// Exams (prefill primero para que capture /exams/prefill antes de /exams/:id)
 apiRouter.use('/exams', prefillRouter);
-// Exams
+apiRouter.use('/exams', examsRouter);
 
 // Consents
 apiRouter.use('/consents', consentsRouter);

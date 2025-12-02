@@ -5,7 +5,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import { apiRouter } from './api';
 import { config } from './shared/config';
-import debugPlazaRouter from './api/plazas/plazas.router';
+import debugPlazaRouter from './api/_debug/plaza.router';
 import triangulacionRouter from './api/triangulacion/triangulacion.router';
 const app = express();
 

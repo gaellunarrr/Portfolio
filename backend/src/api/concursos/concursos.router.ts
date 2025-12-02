@@ -70,8 +70,6 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { concurso_id, convocatoria_id, convocatoria, nombre } = req.body;
 
-    console.log('POST /concursos - Datos recibidos:', { concurso_id, convocatoria_id, convocatoria, nombre });
-
     // Validaciones
     if (!convocatoria_id) {
       return res.status(400).json({ message: 'La convocatoria es requerida' });
@@ -88,9 +86,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       nombre: Number(nombre),
     });
 
-    console.log('Guardando concurso:', newConcurso.toObject());
     await newConcurso.save();
-    console.log('Concurso guardado exitosamente:', String(newConcurso._id));
 
     return res.status(201).json({
       _id: String(newConcurso._id),
@@ -163,9 +159,36 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
       });
     }
 
+    // Primero obtener el concurso para conocer sus datos
+    const concurso = await Concurso.findById(id).lean();
+    if (!concurso) {
+      return res.status(404).json({ message: 'Concurso no encontrado' });
+    }
+
     // Verificar si hay plazas asociadas
+    // Las plazas pueden referenciar al concurso por: concurso_id (string) o concurso (número)
     const Plaza = require('../../models/Plaza').default;
-    const plazasCount = await Plaza.countDocuments({ concursoId: id });
+    
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔍 [DELETE concurso] Concurso a eliminar:', {
+        _id: id,
+        concurso_id: (concurso as any).concurso_id,
+        nombre: (concurso as any).nombre
+      });
+    }
+    
+    const plazasCount = await Plaza.countDocuments({
+      $or: [
+        { concurso_id: id },
+        { concurso_id: (concurso as any).concurso_id },
+        { concurso: (concurso as any).nombre },
+        { concurso: Number((concurso as any).nombre) }
+      ]
+    });
+    
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔍 [DELETE concurso] Plazas encontradas:', plazasCount);
+    }
 
     if (plazasCount > 0) {
       return res.status(400).json({ 
@@ -173,11 +196,7 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
       });
     }
 
-    const deleted = await Concurso.findByIdAndDelete(id);
-
-    if (!deleted) {
-      return res.status(404).json({ message: 'Concurso no encontrado' });
-    }
+    await Concurso.findByIdAndDelete(id);
 
     return res.status(204).send();
   } catch (err) {

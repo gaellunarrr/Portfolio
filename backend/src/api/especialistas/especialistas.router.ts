@@ -159,7 +159,19 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
 
     // Verificar si hay plazas asignadas a este especialista
     const Plaza = require('../../models/Plaza').default;
-    const plazasCount = await Plaza.countDocuments({ especialistaId: toOid(id) });
+    
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔍 [DELETE especialista] ID a eliminar:', id);
+    }
+    
+    // Las plazas referencian al especialista con el campo especialista_id (string)
+    const plazasCount = await Plaza.countDocuments({ 
+      especialista_id: id 
+    });
+    
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔍 [DELETE especialista] Plazas encontradas:', plazasCount);
+    }
 
     if (plazasCount > 0) {
       return res.status(400).json({ 

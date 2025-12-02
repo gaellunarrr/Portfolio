@@ -2,43 +2,53 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { Types } from 'mongoose';
 import Plaza from '../../models/Plaza';
+import { validateQueryStrings } from '../../middleware/validateRequest';
 
 const router = Router();
 const isOid = (v?: string) => !!v && Types.ObjectId.isValid(v);
 const toOid = (v: string) => new Types.ObjectId(v);
 
 /* ---------- GET - Listar plazas con filtros ---------- */
-router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/', validateQueryStrings('convocatoriaId', 'concursoId'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { convocatoriaId, concursoId } = req.query as {
       convocatoriaId?: string;
       concursoId?: string;
     };
 
-    console.log('🔍 GET /plazas - Parámetros recibidos:', { convocatoriaId, concursoId });
+    // Validar tipos para prevenir NoSQL injection
+    if (typeof convocatoriaId !== 'string' || typeof concursoId !== 'string') {
+      return res.status(400).json({ 
+        message: 'Parámetros inválidos' 
+      });
+    }
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔍 GET /plazas - Parámetros recibidos:', { convocatoriaId, concursoId });
+    }
 
     // Validar que los parámetros requeridos estén presentes
     if (!convocatoriaId || !concursoId) {
-      console.log('❌ Error: Faltan parámetros requeridos');
       return res.status(400).json({ 
         message: 'Se requieren convocatoriaId y concursoId para filtrar plazas' 
       });
     }
 
-    // Debug: Contar total de plazas en la BD
-    const totalPlazas = await Plaza.countDocuments();
-    console.log(`📊 Total de plazas en BD: ${totalPlazas}`);
-    
-    // Debug: Obtener algunas plazas de ejemplo para verificar estructura
-    const samplePlazas = await Plaza.collection.find().limit(3).toArray();
-    console.log('📋 Ejemplos de plazas en BD:', JSON.stringify(samplePlazas.map(p => ({
-      _id: p._id,
-      convocatoria: p.convocatoria,
-      convocatoria_id: p.convocatoria_id,
-      concurso_id: p.concurso_id,
-      concurso: p.concurso,
-      codigo: p.codigo
-    })), null, 2));
+    // Debug: Queries de diagnóstico solo en desarrollo
+    if (process.env.NODE_ENV !== 'production') {
+      const totalPlazas = await Plaza.countDocuments();
+      console.log(`📊 Total de plazas en BD: ${totalPlazas}`);
+      
+      const samplePlazas = await Plaza.collection.find().limit(3).toArray();
+      console.log('📋 Ejemplos de plazas en BD:', JSON.stringify(samplePlazas.map(p => ({
+        _id: p._id,
+        convocatoria: p.convocatoria,
+        convocatoria_id: p.convocatoria_id,
+        concurso_id: p.concurso_id,
+        concurso: p.concurso,
+        codigo: p.codigo
+      })), null, 2));
+    }
 
     // Buscar el concurso para obtener sus variantes
     const Concurso = (await import('../../models/Concurso')).default;
@@ -52,10 +62,14 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
         ]
       } as any);
     } catch (err) {
-      console.log('⚠️ Error buscando concurso:', err);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('⚠️ Error buscando concurso:', err);
+      }
     }
 
-    console.log('📋 Concurso encontrado:', concursoDoc);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📋 Concurso encontrado:', concursoDoc);
+    }
 
     // Buscar la convocatoria para obtener sus variantes
     const Convocatoria = (await import('../../models/Convocatoria')).default;
@@ -69,10 +83,14 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
         ]
       } as any);
     } catch (err) {
-      console.log('⚠️ Error buscando convocatoria:', err);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('⚠️ Error buscando convocatoria:', err);
+      }
     }
 
-    console.log('📋 Convocatoria encontrada:', convocatoriaDoc);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📋 Convocatoria encontrada:', convocatoriaDoc);
+    }
 
     // Construir arrays de posibles valores
     const possibleConvocatoriaIds = [convocatoriaId];
@@ -126,7 +144,9 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       ]
     };
 
-    console.log('🔎 Filtro aplicado:', JSON.stringify(filter, null, 2));
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔎 Filtro aplicado:', JSON.stringify(filter, null, 2));
+    }
 
     // Usar aggregate para hacer lookup con especialistas
     const pipeline: any[] = [
@@ -178,7 +198,6 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       { $sort: { _id: -1 } }
     ];
 
-    console.log('Ejecutando pipeline de agregación...');
     let rows;
     try {
       rows = await Plaza.collection.aggregate(pipeline).toArray();
@@ -186,16 +205,20 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       console.error('Error en aggregation pipeline:', aggErr);
       // Si el error es por conversión de ObjectId, intentar sin lookup
       if (aggErr.message?.includes('$toObjectId') || aggErr.message?.includes('InvalidId')) {
-        console.log('Error en conversión de ObjectId, usando consulta simple sin lookup');
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('Error en conversión de ObjectId, usando consulta simple sin lookup');
+        }
         rows = await Plaza.collection.find(filter).sort({ _id: -1 }).toArray();
       } else {
         return res.status(500).json({ message: 'Error al buscar plazas', error: aggErr.message });
       }
     }
 
-    console.log(`Plazas encontradas: ${rows.length}`);
-    if (rows.length > 0) {
-      console.log('Primera plaza:', JSON.stringify(rows[0], null, 2));
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`Plazas encontradas: ${rows.length}`);
+      if (rows.length > 0) {
+        console.log('Primera plaza:', JSON.stringify(rows[0], null, 2));
+      }
     }
 
     res.set('Cache-Control', 'no-store');
@@ -229,8 +252,6 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 /* ---------- Crear nueva plaza ---------- */
 router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    console.log('POST /plazas - Datos recibidos:', req.body);
-    
     const {
       convocatoria,
       concurso_id,
@@ -244,22 +265,18 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 
     // Validaciones
     if (!convocatoria) {
-      console.log('Error: Convocatoria faltante');
       return res.status(400).json({ message: 'Convocatoria es requerida' });
     }
 
     if (!concurso_id) {
-      console.log('Error: Concurso ID faltante');
       return res.status(400).json({ message: 'Concurso es requerido' });
     }
 
     if (!concurso) {
-      console.log('Error: Número de concurso faltante');
       return res.status(400).json({ message: 'Número de concurso es requerido' });
     }
 
     if (!codigo || !puesto || !unidad_adm) {
-      console.log('Error: Campos obligatorios faltantes', { codigo, puesto, unidad_adm });
       return res.status(400).json({ message: 'Código, puesto y unidad administrativa son requeridos' });
     }
 
@@ -274,9 +291,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       especialista_id: especialista_id || '',
     });
 
-    console.log('Guardando plaza:', newPlaza.toObject());
     await newPlaza.save();
-    console.log('Plaza guardada exitosamente:', newPlaza._id);
 
     return res.status(201).json({
       _id: String(newPlaza._id),

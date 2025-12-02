@@ -321,7 +321,7 @@ router.post("/", async (req: Request, res: Response, next: NextFunction) => {
     const conc = await resolveConc(String(concursoId), rawConcCodigo, conv?._id as any);
     const concIdFinal = (conc?._id as any) || String(concursoId) || (plaza as any).concurso_id || (plaza as any).concursoId;
 
-    console.log('🔍 [links] Resolución de IDs:', { 
+    if (DEBUG) console.debug('🔍 [links] Resolución de IDs:', { 
       conv: conv?._id, 
       conc: conc?._id,
       convIdFinal, 
@@ -353,20 +353,20 @@ router.post("/", async (req: Request, res: Response, next: NextFunction) => {
     const idEsp = cleanse(String(especialistaId || ""));
     const jefeNombre = cleanse(String(clientPrefill?.jefeNombre || ""));
     
-    console.log('🔍 [links] Resolviendo especialista:', { especialistaId, idEsp, jefeNombre });
+    if (DEBUG) console.debug('🔍 [links] Resolviendo especialista:', { especialistaId, idEsp, jefeNombre });
     
     if (idEsp) {
       esp = await Especialista.findOne(
         { $or: [{ _id: idEsp }, { correo: idEsp.toLowerCase() }, { nombre: idEsp }, { hash: idEsp }] },
         "_id nombre correo puesto"
       ).lean();
-      console.log('🔍 [links] Especialista encontrado por ID:', esp);
+      if (DEBUG) console.debug('🔍 [links] Especialista encontrado por ID:', esp);
     }
     if (!esp && jefeNombre) {
-      console.log('🔍 [links] Creando especialista con nombre:', jefeNombre);
+      if (DEBUG) console.debug('🔍 [links] Creando especialista con nombre:', jefeNombre);
       const created = await Especialista.create({ nombre: jefeNombre });
       esp = { _id: created._id, nombre: jefeNombre } as any;
-      console.log('🔍 [links] Especialista creado:', esp);
+      if (DEBUG) console.debug('🔍 [links] Especialista creado:', esp);
     }
     if (!esp?._id) {
       console.error('❌ [links] No se pudo resolver especialista:', { especialistaId, jefeNombre });

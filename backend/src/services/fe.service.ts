@@ -58,7 +58,9 @@ export async function generarFE(args: FEArgs): Promise<Buffer> {
     throw new Error("No se encontró la hoja de evaluación en la plantilla");
   }
   
-  console.log(`Procesando ${args.casos.length} casos en una sola hoja`);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`Procesando ${args.casos.length} casos en una sola hoja`);
+  }
   
   // FOLIO y Fecha
   const fechaActual = new Date().toLocaleDateString('es-MX');
@@ -103,21 +105,27 @@ export async function generarFE(args: FEArgs): Promise<Buffer> {
         filasBloque = [75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104];
         break;
       default:
-        console.warn(`Caso ${numeroCaso} no soportado en la plantilla`);
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn(`Caso ${numeroCaso} no soportado en la plantilla`);
+        }
         continue;
     }
     const numeroAspectosActual = casoData.aspectos.length;
     const numeroAspectosMaximos = filasAspectos.length;
     // Si el caso 2 o 3 no tiene ningún aspecto, ocultar todo el bloque
     if ((numeroCaso === 2 || numeroCaso === 3) && numeroAspectosActual === 0) {
-      console.log(`Ocultando todo el bloque del Caso ${numeroCaso} por no tener ámbitos.`);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`Ocultando todo el bloque del Caso ${numeroCaso} por no tener ámbitos.`);
+      }
       for (const fila of filasBloque) {
         try {
           const row = ws.getRow(fila);
           row.eachCell((cell) => { cell.value = ''; });
           row.hidden = true;
         } catch (error) {
-          console.warn(`Error ocultando fila ${fila} del bloque del Caso ${numeroCaso}:`, error);
+          if (process.env.NODE_ENV !== 'production') {
+            console.warn(`Error ocultando fila ${fila} del bloque del Caso ${numeroCaso}:`, error);
+          }
         }
       }
       continue;
@@ -137,7 +145,9 @@ export async function generarFE(args: FEArgs): Promise<Buffer> {
     });
     // Si tenemos menos aspectos que el máximo, ocultar las filas sobrantes
     if (numeroAspectosActual < numeroAspectosMaximos) {
-      console.log(`Ocultando ${numeroAspectosMaximos - numeroAspectosActual} filas sobrantes para Caso ${numeroCaso}`);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`Ocultando ${numeroAspectosMaximos - numeroAspectosActual} filas sobrantes para Caso ${numeroCaso}`);
+      }
       for (let i = numeroAspectosMaximos - 1; i >= numeroAspectosActual; i--) {
         const filaAspecto = filasAspectos[i];
         const filaEspaciado = filaAspecto + 1;
@@ -148,18 +158,26 @@ export async function generarFE(args: FEArgs): Promise<Buffer> {
           rowEspaciado.eachCell((cell) => { cell.value = ''; });
           rowAspecto.hidden = true;
           rowEspaciado.hidden = true;
-          console.log(`Ocultadas filas ${filaAspecto} y ${filaEspaciado}`);
+          if (process.env.NODE_ENV !== 'production') {
+            console.log(`Ocultadas filas ${filaAspecto} y ${filaEspaciado}`);
+          }
         } catch (error) {
-          console.warn(`Error ocultando filas del aspecto ${i + 1} en Caso ${numeroCaso}:`, error);
+          if (process.env.NODE_ENV !== 'production') {
+            console.warn(`Error ocultando filas del aspecto ${i + 1} en Caso ${numeroCaso}:`, error);
+          }
         }
       }
     }
-    console.log(`Caso ${numeroCaso} completado`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`Caso ${numeroCaso} completado`);
+    }
   }
   
   // Ocultar los casos que no existen (si solo hay 1 caso, ocultar casos 2 y 3)
   const totalCasos = args.casos.length;
-  console.log(`Total de casos reales: ${totalCasos}, ocultando casos no utilizados...`);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`Total de casos reales: ${totalCasos}, ocultando casos no utilizados...`);
+  }
   
   // Definir bloques de filas para cada caso
   const bloquesDelCaso: Record<number, number[]> = {
@@ -170,14 +188,18 @@ export async function generarFE(args: FEArgs): Promise<Buffer> {
   // Ocultar casos que no existen
   for (let casoNumero = totalCasos + 1; casoNumero <= 3; casoNumero++) {
     if (bloquesDelCaso[casoNumero]) {
-      console.log(`Ocultando todo el bloque del Caso ${casoNumero} (no utilizado)`);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`Ocultando todo el bloque del Caso ${casoNumero} (no utilizado)`);
+      }
       for (const fila of bloquesDelCaso[casoNumero]) {
         try {
           const row = ws.getRow(fila);
           row.eachCell((cell) => { cell.value = ''; });
           row.hidden = true;
         } catch (error) {
-          console.warn(`Error ocultando fila ${fila} del Caso ${casoNumero}:`, error);
+          if (process.env.NODE_ENV !== 'production') {
+            console.warn(`Error ocultando fila ${fila} del Caso ${casoNumero}:`, error);
+          }
         }
       }
     }
@@ -199,7 +221,9 @@ export async function generarFE(args: FEArgs): Promise<Buffer> {
   ws.getCell(`C${filaFirma}`).alignment = { horizontal: 'center', vertical: 'middle' };
   ws.getCell(`C${filaFirma}`).font = { bold: true };
   
-  console.log(`Todos los casos procesados en una sola hoja`);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`Todos los casos procesados en una sola hoja`);
+  }
 
   // Generar el buffer del archivo Excel
   const tmpDir = path.resolve(__dirname, `../../tmp`);

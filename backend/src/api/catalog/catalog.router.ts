@@ -13,12 +13,9 @@ const toOid = (v: string) => new Types.ObjectId(v);
 /* ---------- Convocatorias ---------- */
 router.get('/convocatorias', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    console.log('GET /catalog/convocatorias');
     const rows = await Convocatoria
       .find({})
       .lean();
-
-    console.log(`Convocatorias encontradas: ${rows.length}`);
 
     // Evita cacheo en dev (y que el front vea 304)
     res.set('Cache-Control', 'no-store');
@@ -40,7 +37,6 @@ router.get('/convocatorias', async (_req: Request, res: Response, next: NextFunc
 router.get('/concursos', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { convocatoriaId } = req.query as { convocatoriaId?: string };
-    console.log('GET /catalog/concursos - convocatoriaId:', convocatoriaId);
 
     // Construye filtro tolerante a diferentes nombres de campo y tipos (ObjectId / string)
     const buildOrByConv = (id: string, asOid: boolean) => {
@@ -65,15 +61,11 @@ router.get('/concursos', async (req: Request, res: Response, next: NextFunction)
       };
     }
 
-    console.log('Filtro concursos:', JSON.stringify(filter, null, 2));
-
     // Usamos el driver nativo para evitar CastError si llegan strings
     const rows = await Concurso.collection
       .find(filter)
       .sort({ createdAt: -1 })
       .toArray();
-
-    console.log(`Concursos encontrados: ${rows.length}`);
 
     res.set('Cache-Control', 'no-store');
 
@@ -96,15 +88,12 @@ router.get('/concursos', async (req: Request, res: Response, next: NextFunction)
 /* ---------- Especialistas ---------- */
 router.get('/especialistas', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    console.log('GET /catalog/especialistas');
     const rows = await Especialista
       .find(
         { nombre: { $exists: true, $ne: '' } },
         { nombre: 1, correo: 1, puesto: 1 }
       )
       .lean();
-
-    console.log(`Especialistas encontrados: ${rows.length}`);
 
     res.set('Cache-Control', 'no-store');
 

@@ -184,16 +184,22 @@ export async function prefillByToken(tokenHex: string) {
   const convocatoriaId = (link as any)?.convocatoriaId;
   if (convocatoriaId) {
     try {
-      console.log(`Buscando folio en aspirantes para convocatoriaId: ${convocatoriaId}`);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`Buscando folio en aspirantes para convocatoriaId: ${convocatoriaId}`);
+      }
       const aspirante = await Aspirante.findOne({
         convocatoriaId: convocatoriaId
       }).lean();
       
       if (aspirante) {
         folioAspirante = aspirante.folio;
-        console.log(`Folio encontrado en aspirantes: ${folioAspirante}`);
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`Folio encontrado en aspirantes: ${folioAspirante}`);
+        }
       } else {
-        console.log('No se encontró aspirante para esta convocatoria');
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('No se encontró aspirante para esta convocatoria');
+        }
       }
     } catch (error) {
       console.error('Error al buscar folio en aspirantes:', error);
@@ -201,12 +207,14 @@ export async function prefillByToken(tokenHex: string) {
   }
 
   // Construimos el header final priorizando: header del Link -> Plaza -> vacío
-  console.log(`=== DEBUG LINKS SERVICE FOLIO ===`);
-  console.log(`Header original (hdr):`, hdr);
-  console.log(`Plaza encontrada:`, plaza);
-  console.log(`Folio en hdr: "${hdr.folio}"`);
-  console.log(`Folio en plaza: "${(plaza as any)?.folio}"`);
-  console.log(`========================`);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`=== DEBUG LINKS SERVICE FOLIO ===`);
+    console.log(`Header original (hdr):`, hdr);
+    console.log(`Plaza encontrada:`, plaza);
+    console.log(`Folio en hdr: "${hdr.folio}"`);
+    console.log(`Folio en plaza: "${(plaza as any)?.folio}"`);
+    console.log(`========================`);
+  }
   
   return {
     plazaId: String((plaza as any)?._id ?? (link as any)?.plazaId ?? ''),

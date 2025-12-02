@@ -140,6 +140,17 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
       });
     }
 
+    // Verificar si hay plazas asociadas
+    const plazasCount = await Plaza.countDocuments({
+      convocatoria: id
+    });
+
+    if (plazasCount > 0) {
+      return res.status(400).json({ 
+        message: `No se puede eliminar. La convocatoria tiene ${plazasCount} plaza(s) asociada(s)` 
+      });
+    }
+
     const deleted = await Convocatoria.findByIdAndDelete(id);
 
     if (!deleted) {

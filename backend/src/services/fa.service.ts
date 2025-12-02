@@ -34,12 +34,16 @@ type FAArgs = {
 
 export async function generarFA(args: FAArgs): Promise<Buffer> {
   try {
-    console.log('Generando FA con args:', JSON.stringify(args, null, 2));
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Generando FA con args:', JSON.stringify(args, null, 2));
+    }
     
     // Usar plantilla multi-caso si hay múltiples casos
     const templateName = args.casos && args.casos.length > 0 ? "fa-multi.hbs" : "fa.hbs";
     const tplPath = path.resolve(__dirname, `../templates/${templateName}`);
-    console.log('Template path:', tplPath);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Template path:', tplPath);
+    }
     
     if (!fs.existsSync(tplPath)) {
       throw new Error(`Template no encontrado en: ${tplPath}`);
@@ -50,7 +54,9 @@ export async function generarFA(args: FAArgs): Promise<Buffer> {
 
     // Usar el nuevo logo PNG de INEGI
     const logoPath = path.resolve(__dirname, "../assets/Logo.png");
-    console.log('Logo PNG path:', logoPath);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Logo PNG path:', logoPath);
+    }
     
     if (!fs.existsSync(logoPath)) {
       throw new Error(`Logo PNG no encontrado en: ${logoPath}`);
@@ -61,7 +67,9 @@ export async function generarFA(args: FAArgs): Promise<Buffer> {
     const logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
 
     const html = tpl({ ...args, logoBase64 });
-    console.log('HTML generado (primeros 500 chars):', html.substring(0, 500));
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('HTML generado (primeros 500 chars):', html.substring(0, 500));
+    }
 
     const browser = await puppeteer.launch({
       headless: true,
@@ -76,7 +84,9 @@ export async function generarFA(args: FAArgs): Promise<Buffer> {
     });
     await browser.close();
     
-    console.log('PDF generado exitosamente, tamaño:', pdfUnit8.length, 'bytes');
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('PDF generado exitosamente, tamaño:', pdfUnit8.length, 'bytes');
+    }
     return Buffer.from(pdfUnit8);
   } catch (error) {
     console.error('Error en generarFA:', error);
